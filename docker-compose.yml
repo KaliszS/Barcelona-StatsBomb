@@ -1,0 +1,35 @@
+version: "3"
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    image: sveltekit
+    container_name: barca-sveltekit
+    command: npm run dev -- --host --open
+    ports:
+      - "3899:3000"
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend/src:/usr/src/app/src
+      - ./frontend/static:/usr/src/app/static
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: fastapi-base
+    container_name: barca-fastapi
+    command: /bin/sh -c "/entrypoint.sh"
+    ports:
+      - "8899:80"
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+  db:
+    image: mongo
+    container_name: barca-mongo
+    ports:
+      - "27017:27017" 
+
