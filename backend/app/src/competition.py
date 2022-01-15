@@ -10,19 +10,24 @@ router = APIRouter()
 competitionsCollection = db["competitions"]
 competitions_file_path = "app/data/competitions.json"
 
-@router.post("/competitions", status_code=status.HTTP_201_CREATED)
+@router.post("/json", status_code=status.HTTP_201_CREATED)
 async def add_competitions():
 
     with open(competitions_file_path) as file:
         competitions= json.load(file)
         for competition in competitions:
             comp_dict = {
-                "competition_id": competition["competition_id"],
-                "season_id": competition["season_id"],
+                "_id": competition["competition_id"],
                 "competition_name": competition["competition_name"],
                 "country_name": competition["country_name"],
-                "season_name": competition["season_name"]}
-            competitionsCollection.insert_one(comp_dict)
+                "season_name": competition["season_name"]
+            }
+
+            if await competitionsCollection.find_one({"_id": comp_dict["_id"]}):
+                continue
+            else:
+                await competitionsCollection.insert_one(comp_dict)
+
     return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": "Competitions added"})
 
 @router.post(
@@ -52,47 +57,53 @@ async def get_all_competitions():
 
 
 @router.get(
-    "/{season_id}",
-    response_description="Get a competition season by id",
+    "/{competition_id}",
+    response_description="Get a competition by id",
     response_model=CompetitionModel,
 )
-async def get_competition(season_id: int):
-    if competition := await competitionsCollection.find_one({"season_id": season_id}):
+async def get_competition(competition_id: int):
+    if competition := await competitionsCollection.find_one({"_id": competition_id}):
         return competition
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Competition season with id {season_id} not found",
+        detail=f"Competition season with id {competition_id} not found",
     )
 
 
 @router.put(
-    "/{season_id}",
-    response_description="Update a competition season by id",
+    "/{competition_id}",
+    response_description="Update a competition by id",
     response_model=CompetitionModel,
 )
 async def update_competition(
-    season_id: int, competition: UpdateCompetitionModel = Body(...)
+    competition_id: int, competition: UpdateCompetitionModel = Body(...)
 ):
     if competition := await competitionsCollection.find_one_and_update(
-        {"season_id": season_id}, {"$set": competition}, return_document=True
+        {"_id": competition_id}, {"$set": competition}, return_document=True
     ):
         return competition
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Competition season with id {season_id} not found",
+        detail=f"Competition season with id {competition_id} not found",
     )
 
 
-@router.delete("/{season_id}", response_description="Delete a competition season by id")
-async def delete_competition(season_id: int):
+@router.delete("/", response_description="Delete all competitions")
+async def delete_all_competitions():
+    await competitionsCollection.delete_many({})
+    return JSONResponse(status_code=status.HTTP_200_OK, content={"message": "All competitions deleted"})
+
+
+@router.delete("/{competition_id}", response_description="Delete a competition season by id")
+async def delete_competition(competition_id: int):
     if competition := await competitionsCollection.find_one_and_delete(
-        {"season_id": season_id}
+        {"_id": competition_id}
     ):
         return JSONResponse(status_code=status.HTTP_204_NO_CONTENT)
 
     raise HTTPException(
         status_code=status.HTTP_404_NOT_FOUND,
-        detail=f"Competition season with id {season_id} not found",
+        detail=f"Competition season with id {competition_id} not found",
     )

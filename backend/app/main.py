@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.src import competition
+from app.src import competition, season, match
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
@@ -16,9 +16,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
-
-
 app.include_router(competition.router, prefix="/competition", tags=["Competition"])
+app.include_router(season.router, prefix="/season", tags=["Season"])
+app.include_router(match.router, prefix="/match", tags=["Match"])
