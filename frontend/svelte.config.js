@@ -13,7 +13,7 @@ const config = {
 			server: {
 				hmr: {
 					protocol: 'ws',
-					port: 3022
+					port: 3899
 				}
 			}
 		}
