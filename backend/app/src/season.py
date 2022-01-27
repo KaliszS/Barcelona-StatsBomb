@@ -5,36 +5,33 @@ from typing import List, Optional, List
 from app.utils.db import db
 from app.utils.schema import SeasonModel, UpdateSeasonModel
 import json
+from statsbombpy import sb
 
 router = APIRouter()
 seasonsCollection = db["seasons"]
-competitions_file_path = "app/data/competitions.json"
 
 @router.post("/json", status_code=status.HTTP_201_CREATED)
 async def add_seasons():
+    comp = sb.competitions().loc[:, ["competition_id", "competition_name", "season_id", "season_name"]]
+    for i in range(0, len(comp)):
+        if comp.iloc[i]['competition_name'] in ["FA Women's Super League", "Women's World Cup"]:
+            continue
 
-    with open(competitions_file_path) as file:
-        seasons= json.load(file)
-        for season in seasons:
-            season_dict = {
-                "_id": str(season["competition_id"]) + "." + str(season["season_id"]),
-                "season_name": season["season_name"],
-                "competition": season["competition_id"]
-            }
+        season_dict = {
+            "_id": str(comp.iloc[i]["competition_id"]) + "." + str(comp.iloc[i]["season_id"]),
+            "season_name": comp.iloc[i]["season_name"],
+            "competition": int(comp.iloc[i]["competition_id"])
+        }
 
-            if await seasonsCollection.find_one({"_id": season_dict["_id"]}):
-                continue
-            else:
-                await seasonsCollection.insert_one(season_dict)
+        if await seasonsCollection.find_one({"_id": season_dict["_id"]}):
+            continue
+        else:
+            await seasonsCollection.insert_one(season_dict)
 
     return JSONResponse(status_code=status.HTTP_201_CREATED, content={"message": "Seasons added"})
 
 
-@router.get(
-    "/",
-    response_description="List all seasons",
-    response_model=List[SeasonModel],
-)
+@router.get("/",)
 async def get_all_seasons():
     seasons = await seasonsCollection.find().to_list(100)
     return seasons
